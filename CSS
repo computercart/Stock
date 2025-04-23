@@ -1,0 +1,408 @@
+:root {
+    --primary-color: #007bff; /* Blue */
+    --secondary-color: #6c757d; /* Gray */
+    --success-color: #28a745; /* Green */
+    --danger-color: #dc3545; /* Red */
+    --warning-color: #ffc107; /* Yellow */
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --background-color: #eef1f5; /* Light grey background */
+    --card-bg: #ffffff;
+    --text-color: #333;
+    --border-color: #dee2e6;
+    --font-family: 'Inter', sans-serif;
+    --border-radius: 8px;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    background-color: var(--dark-color);
+    color: var(--light-color);
+    padding: 1rem 2rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+h1, h2, h3 {
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+}
+
+h1 { font-size: 1.8rem; }
+h2 { color: var(--primary-color); }
+h3 { color: var(--secondary-color); font-size: 1.1rem; margin-top: 1.5rem; }
+
+
+.container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 1.5rem;
+    padding: 2rem;
+    flex-grow: 1;
+    max-width: 1400px;
+    margin: 0 auto; /* Center container */
+    width: 100%;
+}
+
+.market-section {
+    flex: 3; /* Takes up more space */
+    min-width: 450px; /* Minimum width before wrapping */
+}
+
+.portfolio-section {
+    flex: 1; /* Takes up less space */
+    min-width: 300px;
+    align-self: flex-start; /* Align to top */
+}
+
+.card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--box-shadow);
+    border: 1px solid var(--border-color);
+}
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.auto-day-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap; /* Allow wrapping if space is tight */
+}
+
+.auto-day-controls span {
+    font-weight: 500;
+}
+
+.auto-day-controls label {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    margin-left: 1rem;
+}
+
+#speed-slider {
+    vertical-align: middle; /* Align slider better */
+    cursor: pointer;
+    max-width: 100px; /* Prevent slider from becoming too wide */
+}
+
+
+.status {
+    font-style: italic;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    flex-grow: 1;
+    text-align: right;
+    min-height: 1.2em; /* Prevent layout shift when empty */
+}
+.status.success { color: var(--success-color); font-weight: 500;}
+.status.error { color: var(--danger-color); font-weight: 500;}
+.status.info { color: var(--primary-color); }
+
+
+.table-container {
+    overflow-x: auto; /* Allow horizontal scrolling if needed */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th, td {
+    padding: 0.8rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap; /* Prevent text wrapping in cells */
+}
+
+th {
+    background-color: var(--light-color);
+    font-weight: 500;
+    color: var(--dark-color);
+    position: sticky; /* Make header sticky on vertical scroll */
+    top: 0; /* Stick to the top of the container */
+    z-index: 1; /* Ensure it stays above table content */
+}
+
+td:nth-child(3), /* Price */
+td:nth-child(4), /* Change */
+td:nth-child(5) { /* % Change */
+    text-align: right;
+    font-feature-settings: "tnum"; /* Tabular nums for alignment */
+    font-variant-numeric: tabular-nums;
+}
+
+.price-up { color: var(--success-color); }
+.price-down { color: var(--danger-color); }
+.price-no-change { color: var(--secondary-color); }
+
+.action-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.action-cell input[type="number"] {
+    width: 60px;
+    padding: 0.4rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+/* Hide number spinner */
+.action-cell input[type=number]::-webkit-inner-spin-button,
+.action-cell input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.action-cell input[type=number] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+button {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+    font-size: 0.9rem;
+    white-space: nowrap; /* Prevent button text wrapping */
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+button:disabled {
+    background-color: var(--secondary-color);
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+#start-auto-day-btn {
+     background-color: var(--primary-color);
+     color: white;
+}
+#start-auto-day-btn:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+#stop-auto-day-btn {
+     background-color: var(--warning-color);
+     color: var(--dark-color);
+}
+ #stop-auto-day-btn:hover:not(:disabled) {
+    background-color: #d39e00;
+}
+/* Lighter gray when specifically disabled */
+#stop-auto-day-btn:disabled {
+     background-color: #b0b0b0;
+}
+
+.buy-btn {
+    background-color: var(--success-color);
+    color: white;
+}
+.buy-btn:hover:not(:disabled) {
+    background-color: #1e7e34;
+}
+
+.sell-btn {
+    background-color: var(--danger-color);
+    color: white;
+}
+.sell-btn:hover:not(:disabled) {
+    background-color: #b21f2d;
+}
+
+.portfolio-summary {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.portfolio-summary div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+.portfolio-summary label {
+    color: var(--secondary-color);
+    font-weight: 500;
+    margin-right: 0.5rem;
+}
+.portfolio-summary span {
+    font-weight: 500;
+    text-align: right;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+}
+
+.portfolio-summary .total-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+}
+.portfolio-summary .total-value label { color: var(--dark-color); }
+.portfolio-summary .total-value span { color: var(--primary-color); }
+
+
+#portfolio-list {
+    list-style: none;
+    padding: 0;
+    max-height: 400px; /* Limit height and allow scrolling */
+    overflow-y: auto;
+}
+
+#portfolio-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.5rem; /* Slightly less padding */
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    gap: 0.5rem; /* Add gap between elements */
+}
+#portfolio-list li:last-child {
+    border-bottom: none;
+}
+
+#portfolio-list .stock-info {
+    flex-grow: 1; /* Allow info to take available space */
+}
+
+#portfolio-list .stock-symbol { font-weight: bold; display: block; }
+#portfolio-list .stock-details { color: var(--secondary-color); font-size: 0.85rem; display: block; }
+
+#portfolio-list .stock-value-details {
+    text-align: right;
+    min-width: 100px; /* Ensure enough space for value */
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+}
+#portfolio-list .stock-market-value { font-weight: 500; display: block;}
+#portfolio-list .stock-gain-loss { font-size: 0.8em; display: block; }
+
+
+#portfolio-list .no-holdings {
+    color: var(--secondary-color);
+    font-style: italic;
+    text-align: center;
+    padding: 1rem 0;
+    border-bottom: none;
+    display: block; /* Override flex */
+}
+
+
+footer {
+    text-align: center;
+    padding: 1rem;
+    margin-top: 2rem;
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    background-color: var(--light-color);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .market-section {
+        min-width: 400px;
+    }
+     .portfolio-section {
+        min-width: 250px;
+    }
+}
+
+
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+        padding: 1rem;
+    }
+    .market-section, .portfolio-section {
+        min-width: unset;
+        width: 100%;
+    }
+    header h1 {
+        font-size: 1.5rem;
+    }
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+     .auto-day-controls {
+        justify-content: center; /* Center controls on small screens */
+         width: 100%;
+         gap: 0.5rem 1rem; /* Adjust gap for wrapping */
+    }
+     .auto-day-controls label { margin-left: 0; }
+     #speed-slider { max-width: 120px; }
+
+     .status {
+        text-align: center;
+        margin-top: 0.5rem;
+    }
+    th, td {
+        padding: 0.6rem 0.8rem;
+    }
+    .action-cell {
+        flex-direction: column;
+        align-items: stretch; /* Make elements fill width */
+        gap: 0.3rem;
+    }
+     .action-cell input[type="number"] {
+        width: 100%;
+    }
+     .action-cell button {
+        width: 100%;
+        text-align: center;
+        padding: 0.5rem; /* Adjust button padding */
+     }
+
+}
+
+@media (max-width: 480px) {
+    h1 { font-size: 1.3rem; }
+    button { font-size: 0.85rem; padding: 0.5rem 1rem; }
+    th, td { padding: 0.5rem 0.6rem; font-size: 0.9rem; }
+    .action-cell input[type="number"] { font-size: 0.85rem; }
+    #portfolio-list li { font-size: 0.85rem; }
+    .auto-day-controls span, .auto-day-controls label { font-size: 0.8rem; }
+    #speed-slider { max-width: 100px; }
+}
