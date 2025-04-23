@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Stock Market Simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>Modern Stock Market Simulator</h1>
+    </header>
+
+    <main class="container">
+        <section class="market-section card">
+            <h2>Market Watch</h2>
+            <div class="controls">
+                 <div class="auto-day-controls">
+                    <span>Day: <span id="current-day">1</span></span>
+                    <button id="start-auto-day-btn">Start Auto</button>
+                    <button id="stop-auto-day-btn" disabled>Stop Auto</button>
+                    <label for="speed-slider">Speed (ms/day): <span id="speed-value">2000</span></label>
+                    <input type="range" id="speed-slider" min="250" max="5000" value="2000" step="50">
+                </div>
+                <span id="status-message" class="status">Welcome! Press Start Auto.</span>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price ($)</th>
+                            <th>Change ($)</th>
+                            <th>% Change</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <aside class="portfolio-section card">
+            <h2>My Portfolio</h2>
+            <div class="portfolio-summary">
+                <div>
+                    <label>Cash Balance:</label>
+                    <span id="cash-balance">$10000.00</span>
+                </div>
+                <div>
+                    <label>Holdings Value:</label>
+                    <span id="holdings-value">$0.00</span>
+                </div>
+                <div class="total-value">
+                    <label>Total Portfolio:</label>
+                    <span id="portfolio-total">$10000.00</span>
+                </div>
+            </div>
+            <h3>Owned Stocks</h3>
+            <ul id="portfolio-list">
+                <li class="no-holdings">You don't own any stocks yet.</li>
+            </ul>
+        </aside>
+    </main>
+
+    <footer>
+        <p>A Simple Simulator - Prices are illustrative. Current date: April 23, 2025.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
