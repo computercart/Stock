@@ -1,0 +1,435 @@
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Configuration ---
+    const STARTING_CASH = 10000;
+    const STOCKS = [
+        { symbol: 'GGL', name: 'Goggle Inc.', price: 2800.00, volatility: 0.03, trend: 0.0005, lastChange: 0 },
+        { symbol: 'APL', name: 'Snapple Inc.', price: 175.00, volatility: 0.025, trend: 0.0008, lastChange: 0 },
+        { symbol: 'MSF', name: 'Macrosoft Corp.', price: 300.00, volatility: 0.02, trend: 0.0006, lastChange: 0 },
+        { symbol: 'AMZ', name: 'Jungle Inc.', price: 3300.00, volatility: 0.035, trend: -0.0002, lastChange: 0 },
+        { symbol: 'TSL', name: 'Teslicar Co.', price: 700.00, volatility: 0.05, trend: 0.001, lastChange: 0 },
+        { symbol: 'NVDA', name: 'NvidiaChip Co.', price: 850.00, volatility: 0.04, trend: 0.0015, lastChange: 0 },
+    ];
+    let DAY_INTERVAL_MS = 2000; // Default speed: 2 seconds per day
+
+    const triggerRandomEvent = () => {
+        if (Math.random() < eventProbability) {
+            const event = marketEvents[Math.floor(Math.random() * marketEvents.length)];
+            const message = event.impact(STOCKS);
+            if (message) {
+                showStatusMessage(`Market Event: ${message}`, 'warning', 8000); // Show event for a longer duration
+            }
+        }
+    };
+
+    // --- Game State ---
+    let portfolio = {
+        cash: STARTING_CASH,
+        holdings: {}, // { GGL: { quantity: 5, avgCost: 2750 }, APL: { quantity: 10, avgCost: 170 } ... }
+    };
+    let currentDay = 1;
+    let dayIntervalId = null; // To store the interval ID
+
+    // --- DOM Elements ---
+    const stockTableBody = document.getElementById('stock-table-body');
+    const cashBalanceEl = document.getElementById('cash-balance');
+    const holdingsValueEl = document.getElementById('holdings-value');
+    const portfolioTotalEl = document.getElementById('portfolio-total');
+    const portfolioListEl = document.getElementById('portfolio-list');
+    const startAutoDayBtn = document.getElementById('start-auto-day-btn');
+    const stopAutoDayBtn = document.getElementById('stop-auto-day-btn');
+    const currentDayEl = document.getElementById('current-day');
+    const statusMessageEl = document.getElementById('status-message');
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValueEl = document.getElementById('speed-value');
+
+
+    // --- Utility Functions ---
+    const formatCurrency = (amount) => {
+        // Ensure amount is a number, default to 0 if not
+        const numAmount = Number(amount);
+        if (isNaN(numAmount)) {
+            console.warn("formatCurrency received non-numeric value:", amount);
+            return '$0.00';
+        }
+        return numAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    };
+
+    const formatPercentage = (value) => {
+        // Ensure value is a number, default to 0 if not
+        const numValue = Number(value);
+         if (isNaN(numValue)) {
+             console.warn("formatPercentage received non-numeric value:", value);
+             return '0.00%';
+         }
+        return (numValue * 100).toFixed(2) + '%';
+    };
+
+    let statusTimeoutId = null; // To manage clearing status messages
+    const showStatusMessage = (message, type = 'info', duration = 5000) => {
+        statusMessageEl.textContent = message;
+        statusMessageEl.className = `status ${type}`;
+
+        // Clear any existing timeout
+        if (statusTimeoutId) {
+            clearTimeout(statusTimeoutId);
+        }
+
+        // Set a new timeout to clear the message
+        if (duration > 0) {
+            statusTimeoutId = setTimeout(() => {
+                // Only clear if it's still showing the same message (or empty)
+                if (statusMessageEl.textContent === message || statusMessageEl.textContent === '') {
+                     statusMessageEl.textContent = '';
+                     statusMessageEl.className = 'status';
+                }
+                statusTimeoutId = null;
+            }, duration);
+        }
+    };
+
+
+    // --- Core Logic ---
+    const updateStockPrices = () => {
+        STOCKS.forEach(stock => {
+            // Simulate price change more realistically
+            const randomFactor = (Math.random() - 0.49) * 2; // Skew slightly positive on average? (Adjust 0.49 if desired)
+            const changePercent = randomFactor * stock.volatility;
+            const trendEffect = stock.trend; // Trend as a small fixed percentage change tendency per day
+
+            // Calculate change based on current price
+            let priceChange = stock.price * (changePercent + trendEffect);
+
+            // Add minor absolute noise component (e.g., +/- $0.05)
+            priceChange += (Math.random() - 0.5) * 0.1;
+
+            // Apply some clamping/limits to prevent extreme jumps
+            const maxDailyChange = stock.price * 0.25; // Max 25% change per day
+            priceChange = Math.max(-maxDailyChange, Math.min(maxDailyChange, priceChange));
+
+            const oldPrice = stock.price;
+            stock.price = Math.max(0.01, oldPrice + priceChange); // Floor price at $0.01
+            stock.lastChange = stock.price - oldPrice;
+        });
+    };
+
+    const calculatePortfolioValue = () => {
+        let holdingsValue = 0;
+        let cleanupNeeded = false; // Flag if we find zero holdings
+        for (const symbol in portfolio.holdings) {
+            const stock = STOCKS.find(s => s.symbol === symbol);
+            if (stock && portfolio.holdings[symbol].quantity > 0) {
+                holdingsValue += portfolio.holdings[symbol].quantity * stock.price;
+            } else if (portfolio.holdings[symbol]?.quantity <= 0) {
+                 // Mark for cleanup but don't delete while iterating directly
+                 cleanupNeeded = true;
+            }
+        }
+
+        // Perform cleanup outside the loop if needed
+        if (cleanupNeeded) {
+             for (const symbol in portfolio.holdings) {
+                 if (portfolio.holdings[symbol].quantity <= 0) {
+                     console.warn(`Cleaning up zero holding for ${symbol}`);
+                     delete portfolio.holdings[symbol];
+                 }
+             }
+        }
+
+        return {
+            holdingsValue,
+            totalValue: portfolio.cash + holdingsValue
+        };
+    };
+
+    // --- Rendering Functions ---
+    const renderMarket = () => {
+        // Consider using DocumentFragment for performance if many stocks
+        const fragment = document.createDocumentFragment();
+
+        STOCKS.forEach(stock => {
+            const row = document.createElement('tr');
+            const change = stock.lastChange;
+            const priceBeforeChange = stock.price - change;
+            const percentChange = priceBeforeChange !== 0 ? (change / priceBeforeChange) : 0;
+
+            let changeClass = 'price-no-change';
+            if (change > 0.001) changeClass = 'price-up'; // Use small threshold
+            if (change < -0.001) changeClass = 'price-down';
+            let sign = change > 0.001 ? '+' : (change < -0.001 ? '' : '');
+
+            // Find current holding quantity to disable sell if needed
+            const currentHolding = portfolio.holdings[stock.symbol]?.quantity || 0;
+
+            row.innerHTML = `
+                <td>${stock.symbol}</td>
+                <td>${stock.name}</td>
+                <td class="${changeClass}">${formatCurrency(stock.price)}</td>
+                <td class="${changeClass}">${sign}${formatCurrency(change)}</td>
+                <td class="${changeClass}">${sign}${formatPercentage(percentChange)}</td>
+                <td class="action-cell">
+                    <input type="number" min="1" value="1" class="quantity-input" data-symbol="${stock.symbol}-qty" aria-label="Quantity for ${stock.symbol}">
+                    <button class="buy-btn" data-symbol="${stock.symbol}">Buy</button>
+                    <button class="sell-btn" data-symbol="${stock.symbol}" ${currentHolding <= 0 ? 'disabled' : ''}>Sell</button>
+                </td>
+            `;
+            fragment.appendChild(row);
+        });
+
+        stockTableBody.innerHTML = ''; // Clear only once
+        stockTableBody.appendChild(fragment); // Append fragment
+
+        // Ensure event listener is attached (using flag)
+        if (!stockTableBody.listenerAttached) {
+            addMarketActionListeners();
+        }
+    };
+
+    const renderPortfolio = () => {
+        const { holdingsValue, totalValue } = calculatePortfolioValue(); // Calculate first (cleans up zero holdings)
+        cashBalanceEl.textContent = formatCurrency(portfolio.cash);
+        holdingsValueEl.textContent = formatCurrency(holdingsValue);
+        portfolioTotalEl.textContent = formatCurrency(totalValue);
+
+        // --- Update Holdings List ---
+        portfolioListEl.innerHTML = ''; // Clear list
+        const ownedSymbols = Object.keys(portfolio.holdings); // Get keys after potential cleanup
+
+        if (ownedSymbols.length === 0) {
+            portfolioListEl.innerHTML = '<li class="no-holdings">You don\'t own any stocks yet.</li>';
+            return; // Exit early
+        }
+
+        // Create list items using DocumentFragment for better performance
+        const fragment = document.createDocumentFragment();
+        ownedSymbols.sort().forEach(symbol => {
+            const holding = portfolio.holdings[symbol];
+            // We assume quantity > 0 here because calculatePortfolioValue cleaned them up
+            const stock = STOCKS.find(s => s.symbol === symbol);
+            if (!stock) return; // Should not happen
+
+            const currentMarketValue = holding.quantity * stock.price;
+            const avgCostBasis = holding.avgCost * holding.quantity;
+            const gainLoss = currentMarketValue - avgCostBasis;
+            let gainLossClass = gainLoss >= 0.01 ? 'price-up' : (gainLoss <= -0.01 ? 'price-down' : 'price-no-change');
+
+            const li = document.createElement('li');
+            li.innerHTML = `
+                 <span class="stock-info">
+                    <span class="stock-symbol">${symbol}</span>
+                    <span class="stock-details">(${holding.quantity} @ ${formatCurrency(holding.avgCost)} avg)</span>
+                 </span>
+                 <span class="stock-value-details">
+                    <span class="stock-market-value ${gainLossClass}">${formatCurrency(currentMarketValue)}</span>
+                    <span class="stock-gain-loss ${gainLossClass}">(${gainLoss >= 0 ? '+' : ''}${formatCurrency(gainLoss)})</span>
+                 </span>
+            `;
+            fragment.appendChild(li);
+        });
+        portfolioListEl.appendChild(fragment);
+
+        // Update sell button states in the market table (might be slightly redundant but ensures consistency)
+        document.querySelectorAll('.sell-btn').forEach(btn => {
+            const symbol = btn.dataset.symbol;
+            btn.disabled = !portfolio.holdings[symbol] || portfolio.holdings[symbol].quantity <= 0;
+        });
+    };
+
+
+    // --- Event Handlers ---
+    const handleBuyStock = (symbol, quantity) => {
+        const stock = STOCKS.find(s => s.symbol === symbol);
+        if (!stock || quantity <= 0) return;
+
+        const cost = stock.price * quantity;
+
+        if (portfolio.cash >= cost) {
+            portfolio.cash -= cost;
+            if (portfolio.holdings[symbol]) {
+                const existingHolding = portfolio.holdings[symbol];
+                const totalCost = (existingHolding.avgCost * existingHolding.quantity) + cost;
+                const totalQuantity = existingHolding.quantity + quantity;
+                existingHolding.quantity = totalQuantity;
+                existingHolding.avgCost = totalCost / totalQuantity; // Update average cost
+            } else {
+                portfolio.holdings[symbol] = {
+                    quantity: quantity,
+                    avgCost: stock.price // Initial cost basis
+                };
+            }
+            showStatusMessage(`Bought ${quantity} ${symbol} for ${formatCurrency(cost)}`, 'success');
+            renderPortfolio(); // Update portfolio display immediately
+            renderMarket(); // Update sell button state
+        } else {
+            showStatusMessage(`Not enough cash. Need ${formatCurrency(cost)}. Have ${formatCurrency(portfolio.cash)}.`, 'error');
+        }
+    };
+
+    const handleSellStock = (symbol, quantity) => {
+        const stock = STOCKS.find(s => s.symbol === symbol);
+        const holding = portfolio.holdings[symbol];
+        if (!stock || !holding || quantity <= 0) return;
+
+        if (holding.quantity >= quantity) {
+            const proceeds = stock.price * quantity;
+            portfolio.cash += proceeds;
+            const costBasisForSoldShares = holding.avgCost * quantity;
+            const profitLoss = proceeds - costBasisForSoldShares;
+
+            holding.quantity -= quantity;
+
+            showStatusMessage(`Sold ${quantity} ${symbol} for ${formatCurrency(proceeds)}. P/L: ${formatCurrency(profitLoss)}`, 'success');
+
+            // Check if holding is now empty AFTER updating quantity
+            if (holding.quantity === 0) {
+                 // Let calculatePortfolioValue handle the deletion on next render cycle
+                 // delete portfolio.holdings[symbol]; // Or delete immediately
+                 console.log(`Holding for ${symbol} is now zero.`);
+            }
+            renderPortfolio(); // Update portfolio display immediately (will trigger cleanup if needed)
+             renderMarket(); // Update sell button state immediately
+
+        } else {
+            showStatusMessage(`Can't sell ${quantity} ${symbol}. Only own ${holding.quantity}.`, 'error');
+        }
+    };
+
+    // Function called by the interval or manually
+    const advanceOneDay = () => {
+        currentDay++;
+        currentDayEl.textContent = currentDay;
+        // Update prices *before* rendering
+        updateStockPrices();
+        // Re-render market and portfolio based on new prices
+        renderMarket();
+        renderPortfolio();
+        // Optional: Add a subtle status update for day advance if desired
+        // showStatusMessage(`Day ${currentDay}`, 'info', 1000); // Short duration
+    };
+
+    const startAutoDay = () => {
+        if (dayIntervalId === null) { // Only start if not already running
+            // Run immediately once, then start interval
+            advanceOneDay();
+            dayIntervalId = setInterval(advanceOneDay, DAY_INTERVAL_MS);
+
+            startAutoDayBtn.disabled = true;
+            stopAutoDayBtn.disabled = false;
+            speedSlider.disabled = true; // Disable speed change while running
+            showStatusMessage(`Auto-day started (1 day / ${DAY_INTERVAL_MS}ms).`, 'info');
+        }
+    };
+
+    const stopAutoDay = () => {
+        if (dayIntervalId !== null) { // Only stop if running
+            clearInterval(dayIntervalId);
+            dayIntervalId = null;
+            startAutoDayBtn.disabled = false;
+            stopAutoDayBtn.disabled = true;
+            speedSlider.disabled = false; // Re-enable speed change
+            showStatusMessage('Auto-day stopped.', 'info');
+        }
+    };
+
+     const handleSpeedChange = () => {
+        DAY_INTERVAL_MS = parseInt(speedSlider.value, 10);
+        speedValueEl.textContent = DAY_INTERVAL_MS;
+         // If running, stop and restart with the new speed
+         if (dayIntervalId !== null) {
+             stopAutoDay(); // Clears interval and updates buttons/status
+             startAutoDay(); // Restarts interval with new speed and updates buttons/status
+             // Overwrite status message for clarity
+             showStatusMessage(`Auto-day speed changed (1 day / ${DAY_INTERVAL_MS}ms). Running.`, 'info');
+         } else {
+             showStatusMessage(`Speed set to ${DAY_INTERVAL_MS}ms per day.`, 'info');
+         }
+    };
+
+
+    const addMarketActionListeners = () => {
+        if (stockTableBody.listenerAttached) return; // Prevent duplicates
+
+        stockTableBody.addEventListener('click', (event) => {
+            const target = event.target;
+
+            // Check if the click is on a button within the action cell
+            if (target.tagName !== 'BUTTON' || !target.closest('.action-cell')) {
+                 return; // Ignore clicks not on buy/sell buttons
+            }
+
+            const symbol = target.dataset.symbol;
+            if (!symbol) return; // Should have symbol if it's buy/sell btn
+
+            const actionCell = target.closest('.action-cell');
+            const quantityInput = actionCell?.querySelector('.quantity-input');
+            if (!quantityInput) return; // Should find input
+
+            const quantity = parseInt(quantityInput.value, 10);
+
+             if (isNaN(quantity) || quantity <= 0) {
+                showStatusMessage('Please enter a valid quantity > 0.', 'error');
+                quantityInput.focus();
+                quantityInput.select();
+                return;
+            }
+
+            // Perform action based on button class
+            if (target.classList.contains('buy-btn')) {
+                handleBuyStock(symbol, quantity);
+            } else if (target.classList.contains('sell-btn')) {
+                handleSellStock(symbol, quantity);
+            }
+        });
+         // Set flag to indicate listener is attached
+         stockTableBody.listenerAttached = true;
+         console.log("Market action listener attached.");
+    };
+
+    // --- Initialization ---
+    const initializeGame = () => {
+        console.log("Initializing game...");
+        // Stop any existing interval if re-initializing
+        if (dayIntervalId !== null) {
+            clearInterval(dayIntervalId);
+            dayIntervalId = null;
+        }
+
+        // Reset game state
+        portfolio.cash = STARTING_CASH;
+        portfolio.holdings = {};
+        currentDay = 1;
+        currentDayEl.textContent = currentDay;
+
+        // Reset UI elements related to interval/speed
+        speedSlider.value = DAY_INTERVAL_MS; // Set slider to default
+        speedValueEl.textContent = DAY_INTERVAL_MS; // Update label
+        startAutoDayBtn.disabled = false;
+        stopAutoDayBtn.disabled = true;
+        speedSlider.disabled = false;
+
+        // Reset stock prices and changes (optional, could start with random prices)
+        STOCKS.forEach(stock => {
+             // Optionally reset price to an initial value or keep the last state?
+             // For simplicity, let's keep the prices object but reset lastChange
+            stock.lastChange = 0;
+        });
+
+        // Initial render
+        renderMarket(); // Render market first (attaches listener if needed)
+        renderPortfolio(); // Render portfolio second
+
+        // Attach main control listeners (ensure they are only added once)
+        if (!startAutoDayBtn.listenerAttached) {
+             startAutoDayBtn.addEventListener('click', startAutoDay);
+             stopAutoDayBtn.addEventListener('click', stopAutoDay);
+             speedSlider.addEventListener('input', handleSpeedChange); // 'input' for live updates
+             startAutoDayBtn.listenerAttached = true; // Use flag to prevent re-adding
+             console.log("Control listeners attached.");
+        }
+
+        showStatusMessage('Welcome! Press Start Auto or Buy/Sell manually.', 'info', 0); // Persistent welcome message
+        console.log("Initialization complete.");
+    };
+
+    // Start the game!
+    initializeGame();
+});
